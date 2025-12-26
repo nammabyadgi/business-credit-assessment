@@ -970,9 +970,9 @@
         
         fileInputs.forEach(inputId => {
             const fileInput = document.getElementById(inputId);
-            if (!fileInput || !fileButton) return;  // Skip if element doesn't exist
+            
             const fileButton = fileInput.parentElement.querySelector('.file-button');
-
+            if (!fileInput || !fileButton) return;  // Skip if element doesn't exist
             
             fileInput.addEventListener('change', function(e) {
                 if (this.files && this.files[0]) {
