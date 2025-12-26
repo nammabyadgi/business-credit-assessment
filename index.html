@@ -712,10 +712,32 @@
                 showLoadingSpinner('🔍 Searching for business data...');
                 
                 // Query 1: Search for business on IndiaMART + Google + social media
-                const searchQuery = `Find business information for "${businessName}" in ${city}. 
-                Include: IndiaMART profile link, Google Business profile rating, 
-                Facebook/LinkedIn page, customer reviews summary, GST verification status.
-                Format as JSON with fields: indiamart_url, google_rating, facebook_url, linkedin_url, reviews_summary, gst_status`;
+                const searchQuery = `
+You are a business verification assistant for India.
+
+Given the business/trade name: "${businessName}"
+
+Tasks:
+1. Find likely GST number(s) if publicly listed
+2. Identify state code from address/location
+3. Infer GST format if exact number unavailable
+4. Provide confidence score (0–100)
+
+Rules:
+- Return ONLY valid JSON
+- If unsure, set gst_number = null
+- Never hallucinate exact GST if not confident
+
+JSON format:
+{
+  "business_name": "",
+  "possible_gst_number": "",
+  "state_code": "",
+  "confidence": 0,
+  "source": ""
+}
+`;
+
                 
                 const businessData = await queryBackendAI(searchQuery);
 
