@@ -728,7 +728,8 @@
                     Provide: percentage positive, percentage negative, key strengths, key weaknesses.
                     Format as JSON.`;
                     
-                    sentimentData = await queryPerplexity(sentimentQuery);
+                    
+                    sentimentData = await queryBackendAI(sentimentQuery);
                 }
                 
                 // Query 3: Check GST validity if number provided
@@ -737,7 +738,7 @@
                     const gstQuery = `Is GST number "${gstNumber}" valid for business "${businessName}"? 
                     Check structure and format. Provide validation status and any red flags.`;
                     
-                    gstValidation = await queryPerplexity(gstQuery);
+                    gstValidation = await queryBackendAI(gstQuery);
                 }
                 
                 hideLoadingSpinner();
@@ -759,26 +760,25 @@
 
         async function queryBackendAI(prompt) {
   try {
+    const formBody = `prompt=${encodeURIComponent(prompt)}`;
+
     const response = await fetch(
       'https://script.google.com/macros/s/AKfycby1wh3FSkZCfEaiU0xkkmapAfcmCZu27THz8xNTTMQD-ay8wWBE1RXwzIzYqcwAvZTh/exec',
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt })
+        body: formBody
+        // ❗ NO headers → avoids CORS preflight
       }
     );
 
-    const data = await response.json();
+    const data = JSON.parse(await response.text());
 
     if (!data.success) throw new Error('AI failed');
 
-    // Try to parse JSON from Gemini response
     const text = data.result;
     const match = text.match(/\{[\s\S]*\}/);
 
-    if (match) {
-      return JSON.parse(match[0]);
-    }
+    if (match) return JSON.parse(match[0]);
 
     return { summary: text };
 
@@ -787,6 +787,7 @@
     return simulatePerplexityResponse(prompt);
   }
 }
+
 
         
         // Core Perplexity API query function (FREE - NO API KEY NEEDED)
