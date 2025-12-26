@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Business Credit Assessment Tool</title>
+    <link rel="icon" href="/favicon.ico" type="image/x-icon">
+
     <style>
         :root {
             --color-primary: #208791;
@@ -968,8 +970,9 @@
         
         fileInputs.forEach(inputId => {
             const fileInput = document.getElementById(inputId);
-            if (!fileInput) return; // Skip if element doesn't exist
-            const fileButton = fileInput.previousElementSibling;
+            if (!fileInput || !fileButton) return;  // Skip if element doesn't exist
+            const fileButton = fileInput.parentElement.querySelector('.file-button');
+
             
             fileInput.addEventListener('change', function(e) {
                 if (this.files && this.files[0]) {
