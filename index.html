@@ -785,7 +785,7 @@ JSON format:
     const formBody = `prompt=${encodeURIComponent(prompt)}`;
 
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbyzjys8L-ok8_-hJy_AsRLu0I8BIqonq05_4flk2TkvCwhYyIS4ULfd-_iCVH70tB7x/exec',
+      'https://script.google.com/macros/s/AKfycbyOl_MyfamaKbRJCFT-j4uL61iwZTsUmYE0yDRdVtM3RQ1bU-ntL3QGzpqn-QhiEl6M/exec',
       {
         method: 'POST',
         body: formBody
@@ -806,6 +806,11 @@ JSON format:
 
   } catch (err) {
     console.warn('Backend AI failed, using local fallback');
+
+  if (String(err).toLowerCase().includes('rate')) {
+    showToast('⏳ AI usage limit reached. Please try later.', 'warning');
+  }
+      
     return simulatePerplexityResponse(prompt);
   }
 }
