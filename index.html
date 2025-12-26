@@ -717,7 +717,8 @@
                 Facebook/LinkedIn page, customer reviews summary, GST verification status.
                 Format as JSON with fields: indiamart_url, google_rating, facebook_url, linkedin_url, reviews_summary, gst_status`;
                 
-                const businessData = await queryPerplexity(searchQuery);
+                const businessData = await queryBackendAI(searchQuery);
+
                 
                 // Query 2: Get sentiment analysis of reviews
                 let sentimentData = null;
@@ -754,6 +755,39 @@
                 return null;
             }
         }
+
+
+        async function queryBackendAI(prompt) {
+  try {
+    const response = await fetch(
+      'https://script.google.com/macros/s/AKfycby1wh3FSkZCfEaiU0xkkmapAfcmCZu27THz8xNTTMQD-ay8wWBE1RXwzIzYqcwAvZTh/exec',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt })
+      }
+    );
+
+    const data = await response.json();
+
+    if (!data.success) throw new Error('AI failed');
+
+    // Try to parse JSON from Gemini response
+    const text = data.result;
+    const match = text.match(/\{[\s\S]*\}/);
+
+    if (match) {
+      return JSON.parse(match[0]);
+    }
+
+    return { summary: text };
+
+  } catch (err) {
+    console.warn('Backend AI failed, using local fallback');
+    return simulatePerplexityResponse(prompt);
+  }
+}
+
         
         // Core Perplexity API query function (FREE - NO API KEY NEEDED)
         async function queryPerplexity(question) {
@@ -1339,7 +1373,8 @@
             // Reset file buttons
             fileInputs.forEach(inputId => {
                 const fileInput = document.getElementById(inputId);
-                const fileButton = fileInput.previousElementSibling;
+                const fileButton = fileInput.parentElement.querySelector('.file-button');
+
                 fileButton.textContent = '📎 Choose file or drag & drop';
                 fileButton.classList.remove('has-file');
             });
