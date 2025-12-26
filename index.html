@@ -1085,6 +1085,12 @@ JSON format:
                 
                 if (result && result.businessData) {
                     const data = result.businessData;
+
+                    if (data.possible_gst_number && data.confidence >= 70) {
+  document.getElementById('gstNumber').value = data.possible_gst_number;
+  showToast('GST auto-detected (verify manually)', 'warning');
+}
+
                     
                     // Auto-fill form fields
                     if (data.indiamart_url) {
