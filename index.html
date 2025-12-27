@@ -712,31 +712,31 @@
                 showLoadingSpinner('🔍 Searching for business data...');
                 
                 // Query 1: Search for business on IndiaMART + Google + social media
-                const searchQuery = `
-You are a business verification assistant for India.
-
-Given the business/trade name: "${businessName}"
-
-Tasks:
-1. Find likely GST number(s) if publicly listed
-2. Identify state code from address/location
-3. Infer GST format if exact number unavailable
-4. Provide confidence score (0–100)
+const searchQuery = `
+Find verified business information for "${businessName}" in India.
 
 Rules:
-- Return ONLY valid JSON
-- If unsure, set gst_number = null
-- Never hallucinate exact GST if not confident
+- Use only publicly available internet sources
+- Do NOT guess GST numbers
+- If GST not found online, return null
+- Include social media only if official
 
-JSON format:
+Return STRICT JSON only:
 {
   "business_name": "",
-  "possible_gst_number": "",
-  "state_code": "",
+  "gst_number": "",
+  "indiamart_url": "",
+  "google_maps_url": "",
+  "website": "",
+  "facebook_url": "",
+  "linkedin_url": "",
+  "google_rating": "",
+  "reviews_summary": "",
   "confidence": 0,
-  "source": ""
+  "sources": []
 }
 `;
+
 
                 
                 const businessData = await queryBackendAI(searchQuery);
@@ -782,115 +782,34 @@ JSON format:
 
         async function queryBackendAI(prompt) {
   try {
-    const formBody = `prompt=${encodeURIComponent(prompt)}`;
+    const body = `prompt=${encodeURIComponent(prompt)}`;
 
     const response = await fetch(
-      'https://script.google.com/macros/s/AKfycbyOl_MyfamaKbRJCFT-j4uL61iwZTsUmYE0yDRdVtM3RQ1bU-ntL3QGzpqn-QhiEl6M/exec',
+      'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec',
       {
         method: 'POST',
-        body: formBody
-        // ❗ NO headers → avoids CORS preflight
+        body
       }
     );
 
     const data = JSON.parse(await response.text());
-
-    if (!data.success) throw new Error('AI failed');
+    if (!data.success) throw new Error(data.error);
 
     const text = data.result;
     const match = text.match(/\{[\s\S]*\}/);
 
-    if (match) return JSON.parse(match[0]);
-
-    return { summary: text };
+    return match ? JSON.parse(match[0]) : { summary: text };
 
   } catch (err) {
-    console.warn('Backend AI failed, using local fallback');
-
-  if (String(err).toLowerCase().includes('rate')) {
-    showToast('⏳ AI usage limit reached. Please try later.', 'warning');
-  }
-      
-    return simulatePerplexityResponse(prompt);
+    showToast('⚠️ AI lookup unavailable. Manual verification required.', 'warning');
+    return null;
   }
 }
 
 
+
         
-        // Core Perplexity API query function (FREE - NO API KEY NEEDED)
-        async function queryPerplexity(question) {
-            try {
-                // Using unofficial but reliable Perplexity endpoint
-                // This uses public API without authentication
-                const response = await fetch('https://api.perplexity.ai/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        model: 'sonar-mini',  // Free tier model
-                        messages: [{
-                            role: 'user',
-                            content: question
-                        }],
-                        max_tokens: 500,
-                        temperature: 0.7
-                    })
-                });
-                
-                if (!response.ok) {
-                    // Fallback: Use web search simulation
-                    console.log('ℹ️ Using local analysis mode (Perplexity API rate limit reached)');
-                    return simulatePerplexityResponse(question);
-                }
-                
-                const data = await response.json();
-                const answer = data.choices[0].message.content;
-                
-                // Parse JSON from response if available
-                try {
-                    const jsonMatch = answer.match(/\{[\s\S]*\}/);
-                    if (jsonMatch) {
-                        return JSON.parse(jsonMatch[0]);
-                    }
-                } catch (e) {
-                    // Return raw text if not valid JSON
-                }
-                
-                return { summary: answer };
-                
-            } catch (error) {
-                console.log('Using local analysis mode');
-                return simulatePerplexityResponse(question);
-            }
-        }
         
-        // Fallback: Local AI-like analysis (runs ZERO-cost)
-        function simulatePerplexityResponse(question) {
-            // This is a smart local analyzer - doesn't need internet
-            if (question.toLowerCase().includes('sentiment')) {
-                return {
-                    percentage_positive: Math.random() * 30 + 60,
-                    percentage_negative: Math.random() * 20 + 10,
-                    percentage_neutral: Math.random() * 20 + 5,
-                    key_strengths: ['Good customer service', 'Quality products', 'Fast delivery'],
-                    key_weaknesses: ['High prices', 'Limited product range']
-                };
-            }
-            
-            if (question.toLowerCase().includes('gst')) {
-                return {
-                    gst_valid: question.match(/\d{15}/) ? true : false,
-                    format_correct: question.match(/\d{15}/) ? true : false,
-                    status: 'Needs manual verification on gst.gov.in'
-                };
-            }
-            
-            return {
-                summary: 'Business information analysis complete. Please verify details manually.',
-                recommendation: 'Use online resources for real-time verification'
-            };
-        }
         
         // Extract data from natural language response
         function parseBusinessResponse(response) {
