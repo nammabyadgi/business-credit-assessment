@@ -1001,19 +1001,22 @@ Return STRICT JSON only:
             }
             
             isSearching = true;
-            showToast('🔍 Searching for business data... (~10 seconds)', 'loading');
+            showToast('🔍 Verifying business from internet sources… (10–30 seconds)', 'loading');
+
             
             try {
                 // Fetch comprehensive business data
                 const result = await fetchBusinessDataWithPerplexity(businessName);
                 
-                if (result && result.businessData) {
+                if (result && result.businessData && result.businessData.business_name) {
+
                     const data = result.businessData;
 
-                    if (data.possible_gst_number && data.confidence >= 70) {
-  document.getElementById('gstNumber').value = data.possible_gst_number;
-  showToast('GST auto-detected (verify manually)', 'warning');
+                    if (data.gst_number && data.confidence >= 70) {
+  document.getElementById('gstNumber').value = data.gst_number;
+  showToast('GST auto-detected (verify manually)', 'success');
 }
+
 
                     
                     // Auto-fill form fields
