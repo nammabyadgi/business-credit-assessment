@@ -741,36 +741,33 @@ Return STRICT JSON only:
                 
                 const businessData = await queryBackendAI(searchQuery);
 
-                
-                // Query 2: Get sentiment analysis of reviews
-                let sentimentData = null;
-                if (businessData && businessData.reviews_summary) {
-                    const sentimentQuery = `Analyze sentiment of these reviews for "${businessName}": 
-                    "${businessData.reviews_summary}"
-                    Provide: percentage positive, percentage negative, key strengths, key weaknesses.
-                    Format as JSON.`;
-                    
-                    
-                    sentimentData = await queryBackendAI(sentimentQuery);
-                }
-                
-                // Query 3: Check GST validity if number provided
-                let gstValidation = null;
-                if (gstNumber && gstNumber.length === 15) {
-                    const gstQuery = `Is GST number "${gstNumber}" valid for business "${businessName}"? 
-                    Check structure and format. Provide validation status and any red flags.`;
-                    
-                    gstValidation = await queryBackendAI(gstQuery);
-                }
-                
-                hideLoadingSpinner();
-                
-                return {
-                    businessData: businessData,
-                    sentimentData: sentimentData,
-                    gstValidation: gstValidation,
-                    timestamp: new Date().toISOString()
-                };
+// 🚨 If business is found, DO NOT block UI for extras
+let sentimentData = null;
+let gstValidation = null;
+
+try {
+    if (businessData && businessData.reviews_summary) {
+        sentimentData = await queryBackendAI(sentimentQuery, 15000);
+    }
+} catch (e) {
+    console.warn('Sentiment skipped:', e.message);
+}
+
+try {
+    if (gstNumber && gstNumber.length === 15) {
+        gstValidation = await queryBackendAI(gstQuery, 15000);
+    }
+} catch (e) {
+    console.warn('GST validation skipped:', e.message);
+}
+
+return {
+    businessData,
+    sentimentData,
+    gstValidation,
+    timestamp: new Date().toISOString()
+};
+
                 
             } catch (error) {
                 console.error('Error fetching from Perplexity:', error);
@@ -1017,46 +1014,29 @@ async function queryBackendAI(prompt, timeoutMs = 30000) {
             }
             
             isSearching = true;
-            showToast('🔍 Verifying business from internet sources… (10–30 seconds)', 'loading');
+            showLoadingSpinner('🔍 Verifying business from internet sources…');
+
 
             
             try {
                 // Fetch comprehensive business data
                 const result = await fetchBusinessDataWithPerplexity(businessName);
                 
-                if (result && result.businessData && result.businessData.business_name) {
-
-                    const data = result.businessData;
-
-                    if (data.gst_number && data.confidence >= 70) {
-  document.getElementById('gstNumber').value = data.gst_number;
-  showToast('GST auto-detected (verify manually)', 'success');
+                if (!result) {
+    showToast('⚠️ Verification failed. Please retry.', 'warning');
+    return;
 }
 
+if (!result.businessData) {
+    showToast('⚠️ No public data found for this business.', 'warning');
+    return;
+}
 
-                    
-                    // Auto-fill form fields
-                    if (data.indiamart_url) {
-                        document.getElementById('indiaMartLink').value = data.indiamart_url;
-                    }
-                    if (data.google_rating) {
-                        document.getElementById('averageRating').value = data.google_rating;
-                    }
-                    if (data.facebook_url || data.linkedin_url) {
-                        let refs = '';
-                        if (data.facebook_url) refs += 'Facebook: ' + data.facebook_url + '\n';
-                        if (data.linkedin_url) refs += 'LinkedIn: ' + data.linkedin_url + '\n';
-                        if (data.reviews_summary) refs += '\nReviews: ' + data.reviews_summary;
-                        document.getElementById('references').value = refs;
-                    }
-                    
-                    // Store sentiment data for score calculation
-                    window.perplexityData = result;
-                    
-                    showToast(`✅ Found: ${businessName}`, 'success');
-                } else {
-                    showToast('⚠️ Business not found. Verify the name and try again.', 'warning');
-                }
+if (!result.businessData.business_name) {
+    showToast('⚠️ Business not found in public sources.', 'warning');
+    return;
+}
+
                 
             } catch (error) {
                 console.error('Search error:', error);
